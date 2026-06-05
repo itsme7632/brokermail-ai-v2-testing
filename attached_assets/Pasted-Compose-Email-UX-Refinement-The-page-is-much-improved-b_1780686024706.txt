@@ -1,0 +1,96 @@
+Compose Email UX Refinement
+
+The page is much improved, but several UX issues remain. Focus only on the Compose Email page.
+
+1. Fix Input Focus States
+
+* The To, CC, BCC, and Subject fields currently show an oversized blue focus outline.
+* Replace it with the same focus styling used elsewhere in the app (Mailbox Settings, Login, Settings forms).
+* Use a subtle border and soft glow.
+* Preserve border radius and dark mode styling.
+
+2. Replace Templates Panel Logic
+   Current behavior:
+
+* The Templates panel loads campaign templates only.
+
+Required behavior:
+
+* Add support for Template Gallery templates.
+* Templates panel should contain:
+
+  * My Templates
+  * Template Gallery
+  * Recently Used
+* Allow previewing a template before inserting it.
+* Allow inserting a gallery template directly into the editor.
+
+3. Improve Preview Mode
+   Current preview feels unfinished.
+
+Add:
+
+* From field
+* To field
+* Subject field
+* Proper email container
+* Better typography hierarchy
+* Desktop/Mobile preview toggle should render a realistic email preview.
+
+4. Improve Mailbox Connection Experience
+   If no mailbox is connected:
+
+* Show a clear empty state inside the composer.
+* Add:
+
+  * Connect Gmail
+  * Connect SMTP
+    buttons.
+
+Do not rely only on the small top-right warning button.
+
+5. Improve Variables Panel
+   Group variables into categories:
+
+Customer
+
+* {name}
+* {email}
+* {phone}
+
+Vehicle
+
+* {vehicle}
+
+Route
+
+* {pickup}
+* {delivery}
+
+Quote
+
+* {price}
+* {quote_id}
+
+Maintain click-to-insert functionality.
+
+6. Improve Attachments Section
+
+* Keep attachments visible.
+* Add drag-and-drop area.
+* Show attached files as cards/chips.
+* Show file size.
+* Allow removing files.
+
+7. Visual Polish
+
+* Match the quality of Gmail, HubSpot, and Apollo compose screens.
+* Maintain dark/light mode support.
+* Do not modify backend sending logic.
+* Do not change SMTP/Gmail integrations.
+
+Provide:
+
+* Files changed
+* Screenshots
+* Summary of UX improvements
