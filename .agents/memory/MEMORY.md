@@ -1,0 +1,11 @@
+- [Vertex AI Mailer stack](vertex-ai-mailer-stack.md) — key decisions for this project's auth, AI, Gmail, and DB layer
+- [Deep import path gotcha](deep-import-paths.md) — workspace libs must export via package.json; deep src/ imports break Vite bundling
+- [OAuth flow pattern](oauth-flow-pattern.md) — single /api/auth/callback for all OAuth flows; state param routes; relative redirects; frontend capture page
+- [Campaign completion logic](campaign-completion-logic.md) — correct completion check is sent+failed===totalLeads via leadsTable, NOT emailQueue.pending===0
+- [Cooldown timer pattern](cooldown-timer-pattern.md) — use ISO timestamp not pre-calculated seconds; useCooldownTimerUntil hook; startCampaignProcessor for recovery
+- [Tracking settings pattern](tracking-settings.md) — DB-driven tracking URL with 30s cache; invalidate on every admin settings save; both processor functions need getTrackingSettings() before their while loop
+- [Gmail Draft variable/formatting fixes](gmail-draft-audit.md) — all 3 Gmail Draft paths had missing quote_id, missing campaign URL vars, wrong body to buildHtmlEmail, missing ctaButtons, missing email field on insert; sentAt column gates tracking
+- [State-sync bug: drafts table in the send try/catch](state-sync-send-fix.md) — db.insert(draftsTable) must never be inside the sendEmail/createGmailDraft try/catch; move critical state updates first, wrap drafts insert in its own non-fatal try/catch
+- [Replit proxy method override](replit-proxy-method-override.md) — Replit deployment proxy silently blocks PATCH/PUT/DELETE; fix is X-HTTP-Method-Override in custom-fetch + middleware in app.ts
+- [ETA countdown and analytics invalidation fix](eta-analytics-fix.md) — useETACountdown must only re-anchor downward; analytics invalidation requires openCount/clickCount in progress endpoint; change flags must be computed before ref mutation
+- [Dark mode architecture](dark-mode-arch.md) — CSS variable overrides in .dark{} + @layer utilities overrides; ThemeContext applies dark class to html; toggle in AppLayout TopHeader only

@@ -1,0 +1,151 @@
+Enhance the existing "Compose Email" page. The functionality already works, but the UI feels too basic and unfinished. Do not remove any existing functionality. Focus only on improving the user experience and layout.
+
+GOAL:
+Make the composer feel like a professional email client similar to Gmail, HubSpot, Apollo, Instantly, or Smartlead while keeping the existing BrokerMAIL AI design system.
+
+1. PAGE LAYOUT
+
+* Replace the single-column layout with a responsive two-column layout.
+* Left side (70% width): Email composer.
+* Right side (30% width): Email tools panel.
+* On mobile, stack the sections vertically.
+
+2. HEADER IMPROVEMENT
+   Replace the current plain header with a richer header containing:
+
+* Page title: "Compose Email"
+* Subtitle: "Create a personalized quote, follow-up, or carrier offer and send it instantly."
+* Connection status badges:
+
+  * SMTP Connected / Not Connected
+  * Gmail Connected / Not Connected
+  * Tracking Enabled
+* Show connection status dynamically.
+
+3. SEND ACTIONS
+   Add prominent action buttons.
+   Desktop:
+
+* Place actions in the top-right and bottom-right.
+* Primary button: Send via SMTP
+* Secondary button: Save Gmail Draft
+* Preview button
+
+Behavior:
+
+* If only SMTP is connected, show SMTP action.
+* If only Gmail is connected, show Gmail Draft action.
+* If both are connected, show both actions.
+* If neither is connected, show disabled actions with guidance.
+
+4. MAILBOX SELECTOR
+   Add a "Send From" selector above the recipient field.
+
+Example:
+Send From:
+▼ Frank Miller [miller@vertexcarship.com](mailto:miller@vertexcarship.com)
+
+Requirements:
+
+* Load available SMTP mailboxes.
+* Load connected Gmail account if available.
+* User chooses which mailbox/account to send from.
+* Required before sending.
+
+5. RIGHT-SIDE TOOLS PANEL
+   Create a professional side panel with cards:
+
+A. Templates
+
+* Show existing templates.
+* Quick insert into editor.
+* Search templates.
+
+B. Variables
+Show clickable variables:
+{name}
+{vehicle}
+{pickup}
+{delivery}
+{price}
+{quote_id}
+{company}
+{phone}
+
+Clicking inserts variable at cursor position.
+
+C. Tracking
+
+* Open Tracking toggle
+* Click Tracking toggle
+* Explain that results appear in Sent Emails.
+
+D. Mailbox Status
+Display:
+
+* Active sending account
+* SMTP status
+* Gmail status
+
+E. Attachments
+Show uploaded files with:
+
+* File icon
+* File name
+* File size
+* Remove button
+
+6. EMAIL PREVIEW
+   Add a Preview mode.
+
+Requirements:
+
+* Desktop preview
+* Mobile preview
+* Render actual email HTML
+* Match existing Template Gallery preview quality
+* Allow switching between Compose and Preview tabs.
+
+7. ATTACHMENT EXPERIENCE
+   Current attachment button is too hidden.
+
+Improve by:
+
+* Drag and drop upload area
+* Visible attached file list
+* Upload progress indicator
+* Remove attachment action
+
+Supported:
+
+* PDF
+* DOCX
+* Images
+
+8. VISUAL POLISH
+
+* Match existing BrokerMAIL AI dark/light themes.
+* Improve spacing.
+* Improve typography hierarchy.
+* Improve empty states.
+* Improve button hierarchy.
+* Add subtle animations for panels and actions.
+* Keep layout clean and professional.
+
+9. DO NOT CHANGE
+
+* Existing sending logic.
+* Existing Gmail integration.
+* Existing SMTP integration.
+* Existing tracking functionality.
+* Existing template system.
+* Existing backend APIs unless absolutely required.
+
+10. DELIVERABLES
+    After implementation provide:
+
+* Modified files.
+* New components created.
+* Any API changes.
+* Screenshots of desktop and mobile layouts.
+* Summary of UX improvements.
