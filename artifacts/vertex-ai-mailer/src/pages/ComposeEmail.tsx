@@ -22,8 +22,10 @@ import {
   FileText, Paperclip, X, Eye, MousePointerClick, Mail, Server,
   Braces, Loader2, CheckCircle2, AlertCircle, Variable, Monitor,
   Smartphone, ChevronRight, Search, FileImage, FileType, File,
-  UploadCloud, Trash2, Zap,
+  UploadCloud, Trash2, Zap, User, Truck, MapPin, DollarSign,
+  Clock, Star, Sparkles,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -48,20 +50,109 @@ type ComposeStatus = {
 
 type Template = { id: number; name: string; subject: string; body: string };
 
+type GalleryTemplate = {
+  id: string; name: string; subject: string; body: string;
+  category: "Outreach" | "Follow-Up" | "Sales" | "Post-Sale";
+  description: string;
+};
+
 type Attachment = {
   filename: string; content: string; contentType: string; size: number;
 };
 
-const VARIABLE_PLACEHOLDERS = [
-  { label: "Name",     value: "{name}",     color: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700" },
-  { label: "Vehicle",  value: "{vehicle}",  color: "bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700" },
-  { label: "Pickup",   value: "{pickup}",   color: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700" },
-  { label: "Delivery", value: "{delivery}", color: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700" },
-  { label: "Price",    value: "{price}",    color: "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700" },
-  { label: "Quote ID", value: "{quote_id}", color: "bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600" },
-  { label: "Company",  value: "{company}",  color: "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700" },
-  { label: "Email",    value: "{email}",    color: "bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-700" },
-  { label: "Phone",    value: "{phone}",    color: "bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700" },
+// ─── Gallery templates ────────────────────────────────────────────────────────
+
+const GALLERY_TEMPLATES: GalleryTemplate[] = [
+  {
+    id: "g-initial-quote",
+    name: "Initial Quote",
+    category: "Outreach",
+    description: "First outreach with a competitive transport quote",
+    subject: "Vehicle Transport Quote – {vehicle}",
+    body: `<p>Hi {name},</p><p>I noticed you're looking to ship your <strong>{vehicle}</strong> from <strong>{pickup}</strong> to <strong>{delivery}</strong> — I'd love to help.</p><p>We're currently offering a competitive rate of <strong>{price}</strong> for this route. Our transport service includes:</p><ul><li>Door-to-door pickup &amp; delivery</li><li>Fully insured transport</li><li>Real-time shipment updates</li><li>Experienced, licensed drivers</li></ul><p>This quote is valid for 48 hours. Ready to book or have questions? Just reply to this email.</p><p>Quote ID: <strong>{quote_id}</strong></p><p>Best,<br/>{company}</p>`,
+  },
+  {
+    id: "g-followup",
+    name: "Follow-Up",
+    category: "Follow-Up",
+    description: "Gentle follow-up after sending an initial quote",
+    subject: "Following up – {vehicle} transport quote",
+    body: `<p>Hi {name},</p><p>I wanted to follow up on the transport quote I sent for your <strong>{vehicle}</strong>.</p><p>We still have capacity on the <strong>{pickup} → {delivery}</strong> route and can honor the rate of <strong>{price}</strong>.</p><p>If you have any questions or would like to adjust pickup/delivery dates, I'm happy to help. Just reply here or give us a call.</p><p>Reference: <strong>{quote_id}</strong></p><p>Best regards,<br/>{company}</p>`,
+  },
+  {
+    id: "g-price-match",
+    name: "Price Match",
+    category: "Sales",
+    description: "Competitive offer to match or beat a rival quote",
+    subject: "Better rate for your {vehicle} shipment",
+    body: `<p>Hi {name},</p><p>I understand you may be comparing options for shipping your <strong>{vehicle}</strong>.</p><p>We'd like to offer you our best rate: <strong>{price}</strong> for the <strong>{pickup} → {delivery}</strong> route — including full door-to-door service and insurance coverage.</p><p>We've moved hundreds of vehicles on this corridor and pride ourselves on on-time delivery. If you've received a lower quote, share it with us — we'll do our best to match or beat it.</p><p>Quote ref: <strong>{quote_id}</strong></p><p>Let me know how you'd like to proceed!</p><p>Best,<br/>{company}</p>`,
+  },
+  {
+    id: "g-thankyou",
+    name: "Thank You – Booking",
+    category: "Post-Sale",
+    description: "Confirmation and next steps after a booking",
+    subject: "Booking confirmed – {vehicle} transport",
+    body: `<p>Hi {name},</p><p>Thank you for booking with us! We're excited to move your <strong>{vehicle}</strong> from <strong>{pickup}</strong> to <strong>{delivery}</strong>.</p><p><strong>What happens next:</strong></p><ul><li>Our team will contact you 24–48 hours before pickup to confirm the exact time window</li><li>You'll receive driver details and a tracking link once your vehicle is picked up</li><li>Estimated delivery will follow the timeline in your booking</li></ul><p>Your booking reference: <strong>{quote_id}</strong></p><p>If you have any questions, just reply to this email. We're here to help!</p><p>Best,<br/>{company}</p>`,
+  },
+  {
+    id: "g-urgency",
+    name: "Urgent Slot Available",
+    category: "Sales",
+    description: "Last-minute availability for a specific route",
+    subject: "Last open slot: {pickup} → {delivery} this week",
+    body: `<p>Hi {name},</p><p>We have a carrier running the <strong>{pickup} → {delivery}</strong> route <strong>this week</strong> and one spot just opened up.</p><p>If you need your <strong>{vehicle}</strong> transported urgently, we can accommodate at <strong>{price}</strong> — but this slot won't last long.</p><p>Reply or call us directly to reserve your spot. No obligation, just availability.</p><p>Quote: <strong>{quote_id}</strong></p><p>Best,<br/>{company}</p>`,
+  },
+  {
+    id: "g-reactivate",
+    name: "Re-engage Past Lead",
+    category: "Outreach",
+    description: "Re-engage a lead who inquired but didn't book",
+    subject: "Still need {vehicle} transport, {name}?",
+    body: `<p>Hi {name},</p><p>It's been a while since you inquired about shipping your <strong>{vehicle}</strong>. We wanted to check in — are you still looking?</p><p>Rates on the <strong>{pickup} → {delivery}</strong> route remain competitive, and we'd love to earn your business.</p><p>If timing has changed or you have new requirements, just let us know. We'll put together a fresh quote at no obligation.</p><p>Best,<br/>{company}</p>`,
+  },
+];
+
+// ─── Variable groups ──────────────────────────────────────────────────────────
+
+const VARIABLE_GROUPS = [
+  {
+    label: "Customer",
+    icon: <User className="h-3 w-3" />,
+    color: "blue",
+    vars: [
+      { label: "Name",     value: "{name}",     pill: "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700" },
+      { label: "Email",    value: "{email}",    pill: "bg-pink-50 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 border-pink-200 dark:border-pink-700" },
+      { label: "Phone",    value: "{phone}",    pill: "bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700" },
+      { label: "Company",  value: "{company}",  pill: "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700" },
+    ],
+  },
+  {
+    label: "Vehicle",
+    icon: <Truck className="h-3 w-3" />,
+    color: "violet",
+    vars: [
+      { label: "Vehicle",  value: "{vehicle}",  pill: "bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700" },
+    ],
+  },
+  {
+    label: "Route",
+    icon: <MapPin className="h-3 w-3" />,
+    color: "emerald",
+    vars: [
+      { label: "Pickup",   value: "{pickup}",   pill: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700" },
+      { label: "Delivery", value: "{delivery}", pill: "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-700" },
+    ],
+  },
+  {
+    label: "Quote",
+    icon: <DollarSign className="h-3 w-3" />,
+    color: "amber",
+    vars: [
+      { label: "Price",    value: "{price}",    pill: "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700" },
+      { label: "Quote ID", value: "{quote_id}", pill: "bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600" },
+    ],
+  },
 ];
 
 const ALLOWED_TYPES: Record<string, string> = {
@@ -162,6 +253,75 @@ function ImageDialog({ open, onClose, onInsert }: {
   );
 }
 
+// ─── Template preview dialog ──────────────────────────────────────────────────
+
+function TemplatePreviewDialog({ template, open, onClose, onInsert }: {
+  template: (Template | GalleryTemplate) | null;
+  open: boolean; onClose: () => void;
+  onInsert: () => void;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const previewHtml = useMemo(() => {
+    if (!template) return "";
+    const body = template.body || "";
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+      body { margin: 0; padding: 24px 32px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b; background: #fff; }
+      p { margin: 0 0 12px; } ul, ol { padding-left: 1.5em; margin: 0 0 12px; }
+      strong { font-weight: 600; } a { color: #2563eb; }
+    </style></head><body>${body}</body></html>`;
+  }, [template]);
+
+  useEffect(() => {
+    if (!iframeRef.current || !open) return;
+    const doc = iframeRef.current.contentDocument;
+    if (doc) { doc.open(); doc.write(previewHtml); doc.close(); }
+  }, [previewHtml, open]);
+
+  if (!template) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="text-base">{template.name}</DialogTitle>
+              {"category" in template && (
+                <span className="inline-flex items-center mt-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                  {template.category}
+                </span>
+              )}
+            </div>
+          </div>
+          {template.subject && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
+              <span className="font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Subject</span>
+              <span className="text-slate-700 dark:text-slate-200 font-medium">{template.subject}</span>
+            </div>
+          )}
+        </DialogHeader>
+        <div className="flex-1 overflow-hidden bg-slate-50 dark:bg-slate-900 p-4">
+          <div className="h-full bg-white rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <iframe
+              ref={iframeRef}
+              title="Template preview"
+              className="w-full h-full min-h-[300px] block border-0"
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </div>
+        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end gap-2 flex-shrink-0">
+          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+          <Button size="sm" onClick={() => { onInsert(); onClose(); }} className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
+            <ChevronRight className="h-4 w-4" /> Use This Template
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusDot({ ok, label }: { ok: boolean; label: string }) {
@@ -175,6 +335,43 @@ function StatusDot({ ok, label }: { ok: boolean; label: string }) {
       <span className={cn("h-1.5 w-1.5 rounded-full", ok ? "bg-emerald-500" : "bg-slate-400")} />
       {label}
     </span>
+  );
+}
+
+// ─── No mailbox banner ─────────────────────────────────────────────────────────
+
+function NoMailboxBanner() {
+  const [, navigate] = useLocation();
+  return (
+    <div className="mx-4 my-4 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-700/50 bg-amber-50/60 dark:bg-amber-900/10 p-5">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">No mailbox connected</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+            You need to connect a mailbox before you can send emails. Choose Gmail for draft-based sending, or SMTP for direct delivery.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => navigate("/mailbox")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5 text-red-500" /> Connect Gmail
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/mailbox")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-colors"
+            >
+              <Server className="h-3.5 w-3.5 text-blue-500" /> Connect SMTP
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -201,12 +398,7 @@ function SendFromSelector({ status, value, onChange }: {
     });
   }
 
-  if (options.length === 0) return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60">
-      <Server className="h-4 w-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
-      <span className="text-sm text-slate-400 dark:text-slate-500 italic">No mailbox connected</span>
-    </div>
-  );
+  if (options.length === 0) return null;
 
   return (
     <div className="flex items-start gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60">
@@ -240,15 +432,24 @@ function SendFromSelector({ status, value, onChange }: {
 function RecipientRow({ label, value, onChange, placeholder }: {
   label: string; value: string; onChange: (v: string) => void; placeholder?: string;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 dark:border-slate-700/60 group">
+    <div className={cn(
+      "flex items-center gap-3 px-4 py-2.5 border-b transition-colors",
+      focused
+        ? "border-slate-300 dark:border-slate-600 bg-blue-50/20 dark:bg-blue-900/5"
+        : "border-slate-100 dark:border-slate-700/60"
+    )}>
       <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide w-8 flex-shrink-0">{label}</span>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={placeholder ?? "email@example.com, another@example.com"}
-        className="flex-1 bg-transparent outline-none text-sm text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 min-w-0"
+        className="flex-1 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 min-w-0 outline-none focus:outline-none ring-0 focus:ring-0 shadow-none focus:shadow-none"
+        style={{ boxShadow: "none" }}
       />
     </div>
   );
@@ -298,17 +499,31 @@ function DragDropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
 
 // ─── Preview pane ─────────────────────────────────────────────────────────────
 
-function PreviewPane({ html, subject, to }: { html: string; subject: string; to: string }) {
+function PreviewPane({
+  html, subject, to, from,
+}: {
+  html: string; subject: string; to: string; from?: string;
+}) {
   const [mode, setMode] = useState<"desktop" | "mobile">("desktop");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const now = useMemo(() => {
+    const d = new Date();
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) +
+      " · " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  }, []);
+
   const previewHtml = useMemo(() => {
-    const body = html || "<p style='color:#94a3b8;font-family:sans-serif;text-align:center;padding:40px 0'>Write something to see a preview…</p>";
+    const body = html || `<p style="color:#94a3b8;font-family:sans-serif;text-align:center;padding:48px 0;font-size:14px;">Write something to see a preview…</p>`;
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-      body { margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.6; color: #1e293b; background: #f8fafc; }
-      a { color: #2563eb; }
-      img { max-width: 100%; height: auto; }
-      ul, ol { padding-left: 1.5em; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.65; color: #1e293b; background: #ffffff; }
+      p { margin: 0 0 14px; }
+      a { color: #2563eb; text-decoration: underline; }
+      img { max-width: 100%; height: auto; border-radius: 4px; }
+      ul, ol { padding-left: 1.5em; margin: 0 0 14px; }
+      li { margin-bottom: 4px; }
+      strong { font-weight: 600; }
     </style></head><body>${body}</body></html>`;
   }, [html]);
 
@@ -319,12 +534,10 @@ function PreviewPane({ html, subject, to }: { html: string; subject: string; to:
   }, [previewHtml]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{subject || "No subject"}</p>
-          {to && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">To: {to}</p>}
-        </div>
+    <div className="flex flex-col h-full gap-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Email Preview</p>
         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
           <button
             type="button"
@@ -350,19 +563,52 @@ function PreviewPane({ html, subject, to }: { html: string; subject: string; to:
           </button>
         </div>
       </div>
-      <div className={cn(
-        "flex-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-start justify-center p-4",
-      )}>
+
+      {/* Email container */}
+      <div className="flex-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-700 overflow-auto flex justify-center p-5">
         <div className={cn(
-          "bg-white shadow-md rounded-lg overflow-hidden transition-all duration-300",
-          mode === "desktop" ? "w-full max-w-2xl min-h-[400px]" : "w-[375px] min-h-[400px]"
+          "w-full flex flex-col bg-white dark:bg-slate-900 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300",
+          mode === "desktop" ? "max-w-2xl" : "max-w-[390px]"
         )}>
-          <iframe
-            ref={iframeRef}
-            title="Email preview"
-            className="w-full min-h-[400px] block border-0"
-            sandbox="allow-same-origin"
-          />
+          {/* Email chrome header */}
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700/60 space-y-2.5">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 leading-tight flex-1 min-w-0">
+                {subject || <span className="text-slate-400 dark:text-slate-500 font-normal italic text-sm">No subject</span>}
+              </h3>
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 flex-shrink-0 mt-0.5">{now}</span>
+            </div>
+            <div className="space-y-1">
+              {from && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-10 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide flex-shrink-0">From</span>
+                  <span className="text-slate-700 dark:text-slate-300">{from}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-10 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide flex-shrink-0">To</span>
+                <span className="text-slate-700 dark:text-slate-300">{to || <span className="text-slate-400 italic">No recipient</span>}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Email body */}
+          <div className="overflow-hidden">
+            <iframe
+              ref={iframeRef}
+              title="Email preview"
+              className="w-full block border-0"
+              style={{ minHeight: 320, height: "auto" }}
+              sandbox="allow-same-origin"
+              onLoad={(e) => {
+                const iframe = e.currentTarget;
+                try {
+                  const h = iframe.contentDocument?.body?.scrollHeight;
+                  if (h) iframe.style.height = h + 32 + "px";
+                } catch {}
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -393,100 +639,267 @@ function PanelSection({ title, icon, children, defaultOpen = true }: {
   );
 }
 
-function TemplatesPanel({ token, onSelect }: {
-  token: string; onSelect: (t: Template) => void;
+// ─── Templates panel (My Templates + Gallery + Recent) ───────────────────────
+
+type TemplateTab = "mine" | "gallery" | "recent";
+const RECENT_KEY = "compose_recent_templates";
+const MAX_RECENT = 5;
+
+function saveRecent(t: { id: string | number; name: string; subject: string; body: string }) {
+  try {
+    const prev: typeof t[] = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    const next = [t, ...prev.filter((r) => String(r.id) !== String(t.id))].slice(0, MAX_RECENT);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+function loadRecent(): { id: string; name: string; subject: string; body: string }[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  "Outreach":  "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800",
+  "Follow-Up": "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-800",
+  "Sales":     "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800",
+  "Post-Sale": "bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-100 dark:border-violet-800",
+};
+
+function TemplateRow({
+  name, subject, badge, description, onInsert, onPreview,
+}: {
+  name: string; subject?: string; badge?: string; description?: string;
+  onInsert: () => void; onPreview: () => void;
 }) {
+  return (
+    <div className="group relative flex items-start gap-2 px-3 py-2.5 rounded-lg border border-transparent hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/15 transition-all cursor-pointer"
+      onClick={onInsert}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{name}</p>
+          {badge && (
+            <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full border", CATEGORY_COLORS[badge] ?? "bg-slate-100 dark:bg-slate-700 text-slate-500 border-slate-200 dark:border-slate-600")}>
+              {badge}
+            </span>
+          )}
+        </div>
+        {description && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{description}</p>}
+        {subject && !description && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{subject}</p>}
+      </div>
+      <button
+        type="button"
+        title="Preview"
+        onClick={(e) => { e.stopPropagation(); onPreview(); }}
+        className="opacity-0 group-hover:opacity-100 flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all mt-0.5"
+      >
+        <Eye className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function TemplatesPanel({ token, onSelect }: {
+  token: string;
+  onSelect: (t: { name: string; subject: string; body: string }) => void;
+}) {
+  const [tab, setTab] = useState<TemplateTab>("mine");
   const [search, setSearch] = useState("");
-  const { data: templates = [], isLoading } = useQuery<Template[]>({
+  const [preview, setPreview] = useState<(Template | GalleryTemplate) | null>(null);
+  const [recent, setRecent] = useState<{ id: string; name: string; subject: string; body: string }[]>(loadRecent);
+
+  const { data: myTemplates = [], isLoading } = useQuery<Template[]>({
     queryKey: ["templates-compose-panel"],
     queryFn: () => apiFetch("/api/templates", token),
     enabled: !!token,
   });
 
-  const filtered = useMemo(() =>
-    templates.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())),
-    [templates, search]
+  const handleInsert = useCallback((t: { name: string; subject: string; body: string } & { id?: string | number }) => {
+    onSelect(t);
+    saveRecent({ id: String(t.id ?? t.name), name: t.name, subject: t.subject, body: t.body });
+    setRecent(loadRecent());
+  }, [onSelect]);
+
+  const filteredMine = useMemo(() =>
+    myTemplates.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())),
+    [myTemplates, search]
+  );
+  const filteredGallery = useMemo(() =>
+    GALLERY_TEMPLATES.filter((t) =>
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.category.toLowerCase().includes(search.toLowerCase())
+    ),
+    [search]
   );
 
+  const tabs: { id: TemplateTab; label: string; icon: React.ReactNode }[] = [
+    { id: "mine",    label: "My Templates", icon: <FileText className="h-3 w-3" /> },
+    { id: "gallery", label: "Gallery",       icon: <Sparkles className="h-3 w-3" /> },
+    { id: "recent",  label: "Recent",        icon: <Clock className="h-3 w-3" /> },
+  ];
+
   return (
-    <PanelSection title="Templates" icon={<FileText className="h-4 w-4" />}>
-      <div className="p-3 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search templates…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-300 dark:focus:border-blue-600 text-slate-700 dark:text-slate-300 placeholder-slate-400"
-          />
+    <>
+      <PanelSection title="Templates" icon={<FileText className="h-4 w-4" />}>
+        {/* Tabs */}
+        <div className="flex border-b border-slate-100 dark:border-slate-700/60">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors border-b-2",
+                tab === t.id
+                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                  : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              )}
+            >
+              {t.icon}
+              <span className="hidden sm:inline">{t.label}</span>
+              <span className="sm:hidden">{t.label.split(" ")[0]}</span>
+            </button>
+          ))}
         </div>
-        {isLoading ? (
-          <div className="text-center py-4 text-slate-400 text-xs flex items-center justify-center gap-1.5">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-4 text-slate-400 dark:text-slate-500 text-xs">
-            {search ? "No matching templates" : "No templates yet"}
-          </div>
-        ) : (
-          <div className="space-y-1 max-h-52 overflow-y-auto pr-0.5">
-            {filtered.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onSelect(t)}
-                className="w-full text-left group px-3 py-2.5 rounded-lg border border-transparent hover:border-blue-200 dark:hover:border-blue-700 hover:bg-blue-50/60 dark:hover:bg-blue-900/20 transition-all"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{t.name}</p>
-                    {t.subject && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">{t.subject}</p>}
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-blue-500 flex-shrink-0 mt-0.5 transition-colors" />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </PanelSection>
+
+        <div className="p-3 space-y-2">
+          {/* Search (only in mine + gallery) */}
+          {tab !== "recent" && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder={tab === "mine" ? "Search templates…" : "Search gallery…"}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:border-blue-300 dark:focus:border-blue-600 text-slate-700 dark:text-slate-300 placeholder-slate-400 transition-colors"
+                style={{ boxShadow: "none" }}
+              />
+            </div>
+          )}
+
+          {/* My Templates */}
+          {tab === "mine" && (
+            isLoading ? (
+              <div className="text-center py-4 text-slate-400 text-xs flex items-center justify-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+              </div>
+            ) : filteredMine.length === 0 ? (
+              <div className="text-center py-5 text-slate-400 dark:text-slate-500 text-xs">
+                {search ? "No matching templates" : "No templates yet — create one in Templates."}
+              </div>
+            ) : (
+              <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                {filteredMine.map((t) => (
+                  <TemplateRow
+                    key={t.id}
+                    name={t.name}
+                    subject={t.subject}
+                    onInsert={() => handleInsert(t)}
+                    onPreview={() => setPreview(t)}
+                  />
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Gallery */}
+          {tab === "gallery" && (
+            filteredGallery.length === 0 ? (
+              <div className="text-center py-5 text-slate-400 dark:text-slate-500 text-xs">No matching templates</div>
+            ) : (
+              <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                {filteredGallery.map((t) => (
+                  <TemplateRow
+                    key={t.id}
+                    name={t.name}
+                    badge={t.category}
+                    description={t.description}
+                    onInsert={() => handleInsert(t)}
+                    onPreview={() => setPreview(t)}
+                  />
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Recent */}
+          {tab === "recent" && (
+            recent.length === 0 ? (
+              <div className="text-center py-5 text-slate-400 dark:text-slate-500 text-xs">
+                No recently used templates yet.
+              </div>
+            ) : (
+              <div className="space-y-0.5 max-h-56 overflow-y-auto">
+                {recent.map((t) => (
+                  <TemplateRow
+                    key={t.id}
+                    name={t.name}
+                    subject={t.subject}
+                    onInsert={() => handleInsert(t)}
+                    onPreview={() => setPreview(t)}
+                  />
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </PanelSection>
+
+      <TemplatePreviewDialog
+        template={preview}
+        open={!!preview}
+        onClose={() => setPreview(null)}
+        onInsert={() => { if (preview) handleInsert(preview as any); }}
+      />
+    </>
   );
 }
+
+// ─── Variables panel ──────────────────────────────────────────────────────────
 
 function VariablesPanel({ onInsert }: { onInsert: (v: string) => void }) {
   return (
     <PanelSection title="Variables" icon={<Variable className="h-4 w-4" />}>
-      <div className="p-3">
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-2">Click to insert at cursor</p>
-        <div className="flex flex-wrap gap-1.5">
-          {VARIABLE_PLACEHOLDERS.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              onClick={() => onInsert(v.value)}
-              title={`Insert ${v.value}`}
-              className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] font-mono font-medium transition-all hover:scale-105 active:scale-95",
-                v.color
-              )}
-            >
-              <Braces className="h-3 w-3 flex-shrink-0" />
-              {v.label}
-            </button>
-          ))}
-        </div>
+      <div className="p-3 space-y-3">
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">Click a variable to insert at cursor</p>
+        {VARIABLE_GROUPS.map((group) => (
+          <div key={group.label}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="text-slate-400 dark:text-slate-500">{group.icon}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{group.label}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pl-0.5">
+              {group.vars.map((v) => (
+                <button
+                  key={v.value}
+                  type="button"
+                  onClick={() => onInsert(v.value)}
+                  title={`Insert ${v.value}`}
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] font-mono font-medium transition-all hover:scale-105 active:scale-95",
+                    v.pill
+                  )}
+                >
+                  <Braces className="h-3 w-3 flex-shrink-0" />
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </PanelSection>
   );
 }
+
+// ─── Tracking panel ───────────────────────────────────────────────────────────
 
 function TrackingPanel({ openTracking, clickTracking, onOpenChange, onClickChange }: {
   openTracking: boolean; clickTracking: boolean;
   onOpenChange: (v: boolean) => void; onClickChange: (v: boolean) => void;
 }) {
   return (
-    <PanelSection title="Tracking" icon={<Zap className="h-4 w-4" />}>
+    <PanelSection title="Tracking" icon={<Zap className="h-4 w-4" />} defaultOpen={false}>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -516,37 +929,7 @@ function TrackingPanel({ openTracking, clickTracking, onOpenChange, onClickChang
   );
 }
 
-function MailboxStatusPanel({ status }: { status: ComposeStatus | undefined }) {
-  return (
-    <PanelSection title="Mailbox Status" icon={<Server className="h-4 w-4" />} defaultOpen={false}>
-      <div className="p-3 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Server className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-xs text-slate-600 dark:text-slate-300">SMTP</span>
-          </div>
-          {status?.smtp.connected
-            ? <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{status.smtp.email}</span>
-            : <span className="text-[11px] text-slate-400">Not connected</span>}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Mail className="h-3.5 w-3.5 text-slate-400" />
-            <span className="text-xs text-slate-600 dark:text-slate-300">Gmail</span>
-          </div>
-          {status?.gmail.connected
-            ? <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{status.gmail.email}</span>
-            : <span className="text-[11px] text-slate-400">Not connected</span>}
-        </div>
-        {!status?.smtp.connected && !status?.gmail.connected && (
-          <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-lg px-2.5 py-2">
-            Connect a mailbox in <strong>Mailbox Settings</strong> to send emails.
-          </p>
-        )}
-      </div>
-    </PanelSection>
-  );
-}
+// ─── Attachments panel ────────────────────────────────────────────────────────
 
 function AttachmentsPanel({ attachments, onAdd, onRemove }: {
   attachments: Attachment[];
@@ -554,24 +937,29 @@ function AttachmentsPanel({ attachments, onAdd, onRemove }: {
   onRemove: (i: number) => void;
 }) {
   return (
-    <PanelSection title={`Attachments${attachments.length ? ` (${attachments.length})` : ""}`} icon={<Paperclip className="h-4 w-4" />} defaultOpen={false}>
+    <PanelSection
+      title={`Attachments${attachments.length ? ` (${attachments.length})` : ""}`}
+      icon={<Paperclip className="h-4 w-4" />}
+      defaultOpen={true}
+    >
       <div className="p-3 space-y-2">
         <DragDropZone onFiles={onAdd} />
         {attachments.length > 0 && (
           <div className="space-y-1.5 mt-1">
             {attachments.map((a, i) => (
-              <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                {fileIcon(a.contentType)}
+              <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 group">
+                <div className="flex-shrink-0">{fileIcon(a.contentType)}</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{a.filename}</p>
-                  <p className="text-[11px] text-slate-400">{formatFileSize(a.size)}</p>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{formatFileSize(a.size)}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onRemove(i)}
-                  className="text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                  title="Remove attachment"
+                  className="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-md text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}
@@ -609,7 +997,6 @@ export default function ComposeEmail() {
     enabled: !!token,
   });
 
-  // Auto-select first available mailbox
   useEffect(() => {
     if (!status || sendFrom) return;
     if (status.smtp.connected) setSendFrom("smtp");
@@ -632,7 +1019,7 @@ export default function ComposeEmail() {
     },
   });
 
-  const handleTemplateSelect = useCallback((template: Template) => {
+  const handleTemplateSelect = useCallback((template: { name: string; subject: string; body: string }) => {
     if (template.subject) setSubject(template.subject);
     if (editor && template.body) editor.commands.setContent(template.body);
     toast({ title: "Template loaded", description: `"${template.name}" inserted into composer.` });
@@ -729,6 +1116,18 @@ export default function ComposeEmail() {
   const canSend = smtpConnected || gmailConnected;
   const busy = isSending || isSavingDraft;
 
+  const fromLabel = useMemo(() => {
+    if (sendFrom === "smtp" && status?.smtp.connected) {
+      const name = status.smtp.fromName;
+      const email = status.smtp.email;
+      return name ? `${name} <${email}>` : email ?? undefined;
+    }
+    if (sendFrom === "gmail" && status?.gmail.connected) {
+      return status.gmail.email ?? undefined;
+    }
+    return undefined;
+  }, [sendFrom, status]);
+
   const primaryAction = sendFrom === "gmail"
     ? { label: "Save Gmail Draft", icon: <Mail className="h-4 w-4" />, onClick: handleSaveDraft, loading: isSavingDraft, style: "violet" as const }
     : { label: "Send Email", icon: <Send className="h-4 w-4" />, onClick: handleSend, loading: isSending, style: "blue" as const };
@@ -746,9 +1145,7 @@ export default function ComposeEmail() {
           <div className="flex flex-wrap gap-2 mt-3">
             <StatusDot ok={smtpConnected} label={smtpConnected ? `SMTP · ${status?.smtp.email ?? "Connected"}` : "SMTP Not Connected"} />
             <StatusDot ok={gmailConnected} label={gmailConnected ? `Gmail · ${status?.gmail.email ?? "Connected"}` : "Gmail Not Connected"} />
-            {(openTracking || clickTracking) && (
-              <StatusDot ok label="Tracking On" />
-            )}
+            {(openTracking || clickTracking) && <StatusDot ok label="Tracking On" />}
           </div>
         </div>
 
@@ -790,9 +1187,7 @@ export default function ComposeEmail() {
                   : "bg-blue-600 hover:bg-blue-700 text-white"
               )}
             >
-              {primaryAction.loading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : primaryAction.icon}
+              {primaryAction.loading ? <Loader2 className="h-4 w-4 animate-spin" /> : primaryAction.icon}
               {primaryAction.label}
             </Button>
           )}
@@ -832,8 +1227,11 @@ export default function ComposeEmail() {
           {tab === "compose" ? (
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
-              {/* Send from selector */}
-              <SendFromSelector status={status} value={sendFrom} onChange={setSendFrom} />
+              {/* No mailbox banner — shown prominently when no mailbox connected */}
+              {!canSend && <NoMailboxBanner />}
+
+              {/* Send from selector — only shown when at least one mailbox connected */}
+              {canSend && <SendFromSelector status={status} value={sendFrom} onChange={setSendFrom} />}
 
               {/* To */}
               <RecipientRow label="To" value={to} onChange={setTo} placeholder="recipient@example.com" />
@@ -865,16 +1263,7 @@ export default function ComposeEmail() {
               {showBcc && <RecipientRow label="BCC" value={bcc} onChange={setBcc} placeholder="bcc@example.com" />}
 
               {/* Subject */}
-              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
-                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide w-8 flex-shrink-0">Subj</span>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Email subject…"
-                  className="flex-1 bg-transparent outline-none text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 min-w-0"
-                />
-              </div>
+              <SubjectRow value={subject} onChange={setSubject} />
 
               {/* Editor toolbar */}
               <EditorToolbar editor={editor} onImage={() => setShowImageDialog(true)} />
@@ -909,8 +1298,13 @@ export default function ComposeEmail() {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 min-h-[500px]">
-              <PreviewPane html={editor?.getHTML() ?? ""} subject={subject} to={to} />
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 min-h-[560px]">
+              <PreviewPane
+                html={editor?.getHTML() ?? ""}
+                subject={subject}
+                to={to}
+                from={fromLabel}
+              />
             </div>
           )}
         </div>
@@ -925,7 +1319,6 @@ export default function ComposeEmail() {
             onOpenChange={setOpenTracking}
             onClickChange={setClickTracking}
           />
-          <MailboxStatusPanel status={status} />
           <AttachmentsPanel
             attachments={attachments}
             onAdd={processFiles}
@@ -938,6 +1331,32 @@ export default function ComposeEmail() {
         open={showImageDialog}
         onClose={() => setShowImageDialog(false)}
         onInsert={handleInsertImage}
+      />
+    </div>
+  );
+}
+
+// ─── Subject row (extracted for clean focus state) ─────────────────────────────
+
+function SubjectRow({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div className={cn(
+      "flex items-center gap-3 px-4 py-2.5 border-b transition-colors",
+      focused
+        ? "border-slate-300 dark:border-slate-600 bg-blue-50/20 dark:bg-blue-900/5"
+        : "border-slate-200 dark:border-slate-700"
+    )}>
+      <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide w-8 flex-shrink-0">Subj</span>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="Email subject…"
+        className="flex-1 bg-transparent text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 min-w-0 outline-none focus:outline-none ring-0 focus:ring-0 shadow-none"
+        style={{ boxShadow: "none" }}
       />
     </div>
   );
